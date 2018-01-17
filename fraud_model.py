@@ -1,4 +1,4 @@
-juimport numpy as np
+import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB
@@ -15,7 +15,7 @@ import json
 
 class FraudModel(object):
     def __init__(self, alpha=0.1, n_jobs=-1, max_features='sqrt', n_estimators=1000,
-                RandomForest=True, KMeansFeatures=True, NaiveBayes=True):
+                 RandomForest=True, KMeansFeatures=True, NaiveBayes=True):
         """
         INPUT:
         - alpha = Additive laplace smoothing parameter for NaiveBayes
@@ -31,10 +31,11 @@ class FraudModel(object):
         - MNB = Multinomial Naive Bayes Classifier
         """
         self.RFC = RandomForestClassifier(n_jobs=n_jobs, max_features=max_features,
-                                            n_estimators=n_estimators)
+                                          n_estimators=n_estimators)
         self.MNB = MultinomialNB(alpha=alpha)
         self.LogR = LogisticRegression()
-        self.STK = StackingClassifier(classifiers=[self.RFC, self.MNB, meta_classifier=self.LogR, use_probas=True)
+        self.STK = StackingClassifier(
+            classifiers=[self.RFC, self.MNB], meta_classifier=self.LogR, use_probas=True)
 
         self.RandomForest = RandomForest
         self.KMeansFeatures = KMeansFeatures
@@ -49,9 +50,9 @@ class FraudModel(object):
 
         # NLP
         if self.KMeansFeatures == True or self.NaiveBayes == True:
-            desc_no_html = run_nlp(X)
+            desc_no_html = update_data_frame(X)
             self.tfidf = TfidfVectorizer(stop_words='english', max_features=1000)
-            word_counts = self.tfidf.fit_transform(desc_no_html)
+            word_counts = self.tfidf.fit_transform(desc_no_html['description_no_HTML'])
 
             if self.KMeansFeatures == True:
                 # K-means
@@ -59,9 +60,10 @@ class FraudModel(object):
                 desc_kmeans.fit(word_counts)
                 self.cluster_centers = desc_kmeans.cluster_centers_
                 X_cluster = compute_cluster_distance(word_counts, self.cluster_centers)
-                RF_X = X.merge(X_cluster)
+                RF_X = pd.merge(X_cluster, X, left_index=True,
+                                right_index=True).drop(columns=['description'])
         else:
-            RF_X = X
+            RF_X = X.drop(columns=['description'])
 
         # Random Forest
         if self.RandomForest == True:
@@ -75,12 +77,12 @@ class FraudModel(object):
         # Stacked Classifier
         if self.RandomForest == True and self.NaiveBayes == True:
             RFCpipeline = make_pipeline(RF_X,
-                          self.RFC)
+                                        self.RFC)
 
             MNBpipeline = make_pipeline(word_counts,
-                          self.MNB)
+                                        self.MNB)
 
-            self.STK.fit(classifiers=[RFCpipeline, MNBpipeline], y)
+            self.STK.fit(y, classifiers=[RFCpipeline, MNBpipeline])
 
     def predict_proba(self, X):
         """
@@ -91,19 +93,15 @@ class FraudModel(object):
         - blah
         """
         if self.KMeansFeatures == True or self.NaiveBayes == True:
-            desc_no_html = run_nlp(X)
-            word_counts = self.tfidf.transform(desc_no_html)
+            desc_no_html = update_data_frame(X)
+            word_counts = self.tfidf.transform(desc_no_html['description_no_HTML'])
 
             if self.KMeansFeatures == True:
                 X_cluster = compute_cluster_distance(word_counts, self.cluster_centers)
-                RF_X = X.merge(X_cluster)
+                RF_X = pd.merge(X_cluster, X, left_index=True,
+                                right_index=True).drop(columns=['description'])
         else:
-            RF_X = X
-
-
-
-        if self.StackedClassifier == True:
-
+            RF_X = X.drop(columns=['description'])
 
         if self.RandomForest == True and self.NaiveBayes == False:
             RFC_preds = self.RFC.predict_proba(RF_X)
@@ -118,6 +116,7 @@ class FraudModel(object):
     def _log_loss(self, y_true, ):
         pass
 
+
 def get_data(datafile):
     df = pd.read_json(datafile)
     X = clean_data(df)
@@ -125,22 +124,24 @@ def get_data(datafile):
     y = _get_labels(df)
     return X, y
 
+
 def _get_labels(df):
     acc_type_dict = {'fraudster': 'fraud',
-                 'fraudster_att': 'fraud',
-                 'fraudster_event': 'fraud',
-                 'premium': 'premium',
-                 'spammer': 'spam',
-                 'spammer_limited': 'spam',
-                 'spammer_noinvite': 'spam',
-                 'spammer_warn': 'spam',
-                 'spammer_web': 'spam',
-                 'tos_lock': 'tos',
-                 'tos_warn': 'tos',
-                 'locked': 'tos'}
+                     'fraudster_att': 'fraud',
+                     'fraudster_event': 'fraud',
+                     'premium': 'premium',
+                     'spammer': 'spam',
+                     'spammer_limited': 'spam',
+                     'spammer_noinvite': 'spam',
+                     'spammer_warn': 'spam',
+                     'spammer_web': 'spam',
+                     'tos_lock': 'tos',
+                     'tos_warn': 'tos',
+                     'locked': 'tos'}
 
     df['acct_label'] = df['acct_type'].map(acc_type_dict)
     return df['acct_label']
+
 
 if __name__ == '__main__':
     train_X, train_y = get_data('data/train_data.json')
