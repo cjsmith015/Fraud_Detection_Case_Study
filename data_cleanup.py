@@ -114,10 +114,10 @@ def final_columns(data):
                       'payout_type_check', 'payout_type_ach', 'usd', 'gbp', 'cad',
                       'aud', 'eur', 'nzd', 'user_type_1', 'user_type_2', 'user_type_3',
                       'user_type_4', 'user_type_5', 'rare_email', 'event_duration',
-                      'listed', 'venue_country_change','is_us', 'is_gb', 'is_ca',
+                      'listed', 'venue_country_change', 'is_us', 'is_gb', 'is_ca',
                       'body_length', 'channels', 'fb_published',
                       'has_analytics', 'has_logo', 'listed', 'name_length', 'show_map',
-                      'user_age']
+                      'user_age', 'description']
     data = data[wanted_columns]
     return data
 
