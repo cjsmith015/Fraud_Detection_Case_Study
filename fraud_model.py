@@ -1,4 +1,4 @@
-import numpy as np
+juimport numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB
@@ -10,6 +10,7 @@ from sklearn.pipeline import make_pipeline
 import pickle
 from nlp import *
 from data_cleanup import *
+import json
 
 
 class FraudModel(object):
@@ -44,7 +45,7 @@ class FraudModel(object):
         self.tfidf = TfidfVectorizer(stop_words='english', max_features=1000)
         word_counts = self.tfidf.fit_transform(desc_no_html)
 
-        if KMeans == true:
+        if KMeans == True:
             # K-means
             desc_kmeans = KMeans(n_clusters=5, random_state=56, n_jobs=-1)
             desc_kmeans.fit(word_counts)
@@ -57,6 +58,7 @@ class FraudModel(object):
 
         # Random Forest
         self.RFC.fit(RF_X, y)
+
         if NaiveBayes == True:
             # Naive Bayes
             self.MNB.fit(word_counts, y)
@@ -121,6 +123,6 @@ if __name__ == '__main__':
     train_X, train_y = get_data('data/train_data.json')
     fraud_model = FraudModel()
     fraud_model.fit(train_X, train_y)
-    with open('fraud_model.pkl', 'w') as f:
-        # Write the model to a file.
-        pickle.dump(fraud_model, f)
+    with open('fraud_model.json', 'w') as f:
+        # Write the model to a file as a JSON string .
+        json.dump(fraud_model.json, f)
