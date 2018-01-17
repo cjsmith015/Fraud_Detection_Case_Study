@@ -129,6 +129,7 @@ def clean_data(data):
     INPUT:
         - data: dataframe
     """
+    clean_data = delivery_method_categorize(data)
     clean_data = country_data(data)
     clean_data = listed_categorize(data)
     clean_data = event_data(data)
