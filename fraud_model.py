@@ -51,7 +51,7 @@ class FraudModel(object):
         # NLP
         if self.KMeansFeatures == True or self.NaiveBayes == True:
             desc_no_html = update_data_frame(X)
-            self.tfidf = TfidfVectorizer(stop_words='english', max_features=1000)
+            self.tfidf = TfidfVectorizer(stop_words='english', max_features=10)
             word_counts = self.tfidf.fit_transform(desc_no_html['description_no_HTML'])
 
             if self.KMeansFeatures == True:
