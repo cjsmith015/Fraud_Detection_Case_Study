@@ -100,11 +100,6 @@ class FraudModel(object):
         else:
             RF_X = X
 
-
-
-        if self.StackedClassifier == True:
-
-
         if self.RandomForest == True and self.NaiveBayes == False:
             RFC_preds = self.RFC.predict_proba(RF_X)
             return RFC_preds
