@@ -51,7 +51,7 @@ class FraudModel(object):
         # NLP
         if self.KMeansFeatures == True or self.NaiveBayes == True:
             desc_no_html = update_data_frame(X)
-            self.tfidf = TfidfVectorizer(stop_words='english', max_features=1000)
+            self.tfidf = TfidfVectorizer(stop_words='english', max_features=2)
             word_counts = self.tfidf.fit_transform(desc_no_html['description_no_HTML'])
 
             if self.KMeansFeatures == True:
@@ -59,16 +59,17 @@ class FraudModel(object):
                 desc_kmeans = KMeans(n_clusters=5, random_state=56, n_jobs=-1)
                 desc_kmeans.fit(word_counts)
                 self.cluster_centers = desc_kmeans.cluster_centers_
-                X_cluster = compute_cluster_distance(word_counts, self.cluster_centers)
-                RF_X = pd.merge(X_cluster, X, left_index=True,
+                self.X_cluster = compute_cluster_distance(word_counts, self.cluster_centers)
+                self.RF_X = pd.merge(self.X_cluster, X, left_index=True,
                                 right_index=True).drop(columns=['description'])
         else:
             RF_X = X.drop(columns=['description'])
 
         # Random Forest
-        if self.RandomForest == True:
+        #if self.RandomForest == True:
             # Random Forest
-            self.RFC.fit(RF_X, y)
+            #self.RFC.fit(RF_X, y)
+
 
         if self.NaiveBayes == True:
             # Naive Bayes
