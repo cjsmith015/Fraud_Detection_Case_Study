@@ -14,13 +14,17 @@ import json
 
 
 class FraudModel(object):
-    def __init__(self, alpha=0.1, n_jobs=-1, max_features='sqrt', n_estimators=1000):
+    def __init__(self, alpha=0.1, n_jobs=-1, max_features='sqrt', n_estimators=1000,
+                RandomForest=True, KMeansFeatures=True, NaiveBayes=True):
         """
         INPUT:
         - alpha = Additive laplace smoothing parameter for NaiveBayes
         - n_jobs = Number of jobs to run RFC on
         - max_features = Number of featres to consider on RFC
         - n_estimators = Number of trees in RFC
+        - RandomForest = Bool, run RFC
+        - KMeansFeatures = Bool, include K means features in RFC
+        - NaiveBayes = Bool, run MNB
 
         ATTRIBUTES:
         - RFC = Random Forest Classifier
@@ -32,8 +36,11 @@ class FraudModel(object):
         self.LogR = LogisticRegression()
         self.STK = StackingClassifier(classifiers=[self.RFC, self.MNB, meta_classifier=self.LogR, use_probas=True)
 
+        self.RandomForest = RandomForest
+        self.KMeansFeatures = KMeansFeatures
+        self.NaiveBayes = NaiveBayes
 
-    def fit(self, X, y, KMeans=True, NaiveBayes=True):
+    def fit(self, X, y):
         """
         INPUT:
         - X: dataframe representing feature matrix for training data
@@ -41,36 +48,39 @@ class FraudModel(object):
         """
 
         # NLP
-        desc_no_html = run_nlp(X)
-        self.tfidf = TfidfVectorizer(stop_words='english', max_features=1000)
-        word_counts = self.tfidf.fit_transform(desc_no_html)
+        if self.KMeansFeatures == True or self.NaiveBayes == True:
+            desc_no_html = run_nlp(X)
+            self.tfidf = TfidfVectorizer(stop_words='english', max_features=1000)
+            word_counts = self.tfidf.fit_transform(desc_no_html)
 
-        if KMeans == True:
-            # K-means
-            desc_kmeans = KMeans(n_clusters=5, random_state=56, n_jobs=-1)
-            desc_kmeans.fit(word_counts)
-            self.cluster_centers = desc_kmeans.cluster_centers_
-            X_cluster = compute_cluster_distance(word_counts, self.cluster_centers)
-
-            RF_X = X.merge(X_cluster)
+            if self.KMeansFeatures == True:
+                # K-means
+                desc_kmeans = KMeans(n_clusters=5, random_state=56, n_jobs=-1)
+                desc_kmeans.fit(word_counts)
+                self.cluster_centers = desc_kmeans.cluster_centers_
+                X_cluster = compute_cluster_distance(word_counts, self.cluster_centers)
+                RF_X = X.merge(X_cluster)
         else:
             RF_X = X
 
         # Random Forest
-        self.RFC.fit(RF_X, y)
+        if self.RandomForest == True:
+            # Random Forest
+            self.RFC.fit(RF_X, y)
 
-        if NaiveBayes == True:
+        if self.NaiveBayes == True:
             # Naive Bayes
             self.MNB.fit(word_counts, y)
 
         # Stacked Classifier
-        RFCpipeline = make_pipeline(RF_X,
-                      self.RFC)
+        if self.RandomForest == True and self.NaiveBayes == True:
+            RFCpipeline = make_pipeline(RF_X,
+                          self.RFC)
 
-        MNBpipeline = make_pipeline(word_counts,
-                      self.MNB)
+            MNBpipeline = make_pipeline(word_counts,
+                          self.MNB)
 
-        self.STK.fit(classifiers=[RFCpipeline, MNBpipeline], y)
+            self.STK.fit(classifiers=[RFCpipeline, MNBpipeline], y)
 
     def predict_proba(self, X):
         """
@@ -80,17 +90,30 @@ class FraudModel(object):
         OUTPUT:
         - blah
         """
-        desc_no_html = run_nlp(X)
-        word_counts = self.tfidf.transform(desc_no_html)
-        X_cluster = compute_cluster_distance(word_counts, self.cluster_centers)
+        if self.KMeansFeatures == True or self.NaiveBayes == True:
+            desc_no_html = run_nlp(X)
+            word_counts = self.tfidf.transform(desc_no_html)
 
-        RF_X = X.merge(X_cluster)
+            if self.KMeansFeatures == True:
+                X_cluster = compute_cluster_distance(word_counts, self.cluster_centers)
+                RF_X = X.merge(X_cluster)
+        else:
+            RF_X = X
 
-        RFC_preds = self.RFC.predict_proba(X)
 
-        STK_preds = self.STK.predict_proba(X)
 
-        self.log_loss_ =
+        if self.StackedClassifier == True:
+
+
+        if self.RandomForest == True and self.NaiveBayes == False:
+            RFC_preds = self.RFC.predict_proba(RF_X)
+            return RFC_preds
+        elif self.RandomForest == False and self.NaiveBayes == True:
+            NB_preds = self.MNB.predict_proba(word_counts)
+            return NB_preds
+        elif self.RandomForest == True and self.NaiveBayes == True:
+            STK_preds = self.STK.predict_proba(X)
+            return STK_preds
 
     def _log_loss(self, y_true, ):
         pass
